@@ -1,4 +1,4 @@
-# 玄助 - 玄幻小说智能写作助手
+# 玄助 - 玄幻小说写作助手
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-2.0%2B-lightgrey)](https://flask.palletsprojects.com/)
