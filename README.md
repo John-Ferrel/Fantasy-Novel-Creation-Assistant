@@ -6,7 +6,7 @@
 
 基于 AI 的玄幻小说创作辅助系统，集成设定管理与智能写作功能。通过 DeepSeek 实现上下文感知的续写/扩写，采用 Notion 式块编辑提升创作体验。
 
-<-- !![Demo Screenshot](screenshot.png)  后续补充截图 -->
+<!-- ![Demo Screenshot](screenshot.png)  后续补充截图 -->
 
 ## 核心功能
 
