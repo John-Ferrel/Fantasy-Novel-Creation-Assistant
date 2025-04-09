@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>小说创作助手</title>
+    <style>
+        body { margin: 20px; font-family: Arial; }
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .project-card {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: box-shadow 0.3s;
+        }
+        .project-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .new-project {
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+        }
+    </style>
+</head>
+<body>
+    <h1>我的小说项目</h1>
+    <div class="project-grid">
+        <!-- 已有项目 -->
+        {% for project in projects %}
+        <div class="project-card" onclick="location.href='/project/{{ project.id }}'">
+            <h3>{{ project.title }}</h3>
+            <p>创建时间：{{ project.created_at.strftime('%Y-%m-%d') }}</p>
+        </div>
+        {% endfor %}
+        
+        <!-- 新建项目 -->
+        <div class="project-card new-project" onclick="createProject()">
+            <button style="font-size: 24px">+ 新建项目</button>
+        </div>
+    </div>
+
+    <script>
+        async function createProject() {
+            const title = prompt('请输入项目名称：');
+            if (title) {
+                await fetch('/project', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title })
+                });
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>

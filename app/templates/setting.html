@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ project.title }} - 设定</title>
+    <style>
+        /* 共用侧边栏样式 */
+        body { 
+            margin: 0; 
+            display: flex; 
+            font-family: Arial;
+        }
+        #sidebar {
+            width: 250px;
+            background: #f8f9fa;
+            padding: 20px;
+            height: 100vh;
+            border-right: 1px solid #ddd;
+        }
+        #content {
+            flex: 1;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* 设定页面特有样式 */
+        .setting-block {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        .category-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .content {
+            margin-top: 10px;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 (与 novel.html 保持一致) -->
+    <div id="sidebar">
+        <h3>{{ project.title }}</h3>
+        <div style="margin: 15px 0;">
+            <button onclick="location.href='/project/{{ project.id }}'">← 返回创作</button>
+        </div>
+        <h4>快捷导航</h4>
+        <div style="margin: 5px 0;">
+            <a href="/project/{{ project.id }}">章节目录</a>
+        </div>
+        <div style="margin: 15px 0;">
+            <button onclick="window.location.href='/'">← 返回项目列表</button>
+        </div>
+    </div>
+
+    <!-- 内容区域 -->
+    <div id="content">
+        <h1>设定管理</h1>
+        <div id="settings">
+            {% for setting in settings %}
+            <div class="setting-block">
+                <input class="category-input" 
+                       value="{{ setting.category }}"
+                       placeholder="设定类别（如：修炼体系）">
+                <div class="content" contenteditable>{{ setting.content }}</div>
+                <div class="controls">
+                    <button onclick="generateText(this, '续写')">续写</button>
+                    <button onclick="generateText(this, '扩写')">扩写</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top:20px;">
+            <button onclick="addSetting()">+ 新增设定类别</button>
+            <button onclick="saveSettings()" style="background:#007bff">💾 保存所有设定</button>
+        </div>
+    </div>
+
+    <script>
+        // 保持原有脚本不变
+        function addSetting() {
+            const html = `
+                <div class="setting-block">
+                    <input class="category-input" placeholder="设定类别">
+                    <div class="content" contenteditable></div>
+                    <div class="controls">
+                        <button onclick="generateText(this, '续写')">续写</button>
+                        <button onclick="generateText(this, '扩写')">扩写</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('settings').insertAdjacentHTML('beforeend', html);
+        }
+
+        async function saveSettings() {
+            const settingsData = Array.from(document.querySelectorAll('.setting-block')).map(block => ({
+                category: block.querySelector('.category-input').value,
+                content: block.querySelector('.content').innerHTML
+            }));
+            
+            const res = await fetch('/setting/{{ project.id }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(settingsData)
+            });
+            
+            if (res.ok) alert('保存成功！');
+        }
+
+        async function generateText(button, action) {
+            const block = button.closest('.setting-block');
+            const currentText = block.querySelector('.content').innerHTML;
+            
+            const res = await fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: action,
+                    current_text: currentText,
+                    project_id: {{ project.id }}
+                })
+            });
+            const data = await res.json();
+            
+            block.querySelector('.content').innerHTML = 
+                action === '续写' ? currentText + data.generated_text : data.generated_text;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ project.title }} - 创作</title>
+    <style>
+        body { margin: 0; display: flex; }
+        #sidebar {
+            width: 250px;
+            background: #f8f9fa;
+            padding: 20px;
+            height: 100vh;
+        }
+        #content {
+            flex: 1;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .block {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .block-controls {
+            margin-top: 10px;
+        }
+        button {
+            padding: 5px 10px;
+            margin-right: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h3>{{ project.title }}</h3>
+        <div>
+            <button onclick="location.href='/setting/{{ project.id }}'">⚙️ 设定管理</button>
+        </div>
+        <h4>章节目录</h4>
+        <div id="chapters">
+            {% for chapter in chapters %}
+            <div style="margin: 5px 0;">
+                <a href="#" onclick="loadChapter({{ chapter.id }})">{{ chapter.title }}</a>
+            </div>
+            {% endfor %}
+        </div>
+        <button onclick="addChapter()">+ 添加章节</button>
+        <div style="margin: 15px 0;">
+            <button onclick="window.location.href='/'">← 返回项目列表</button>
+        </div>
+    </div>
+
+    <div id="content">
+        <h2 id="chapter-title"></h2>
+        <div id="blocks"></div>
+        <button onclick="addBlock()">+ 添加文本块</button>
+        <button onclick="saveContent()">💾 保存</button>
+    </div>
+
+    <script>
+        let currentChapterId = null;
+
+        // 加载章节内容
+        async function loadChapter(chapterId) {
+            const res = await fetch(`/chapter/${chapterId}`);
+            const data = await res.json();
+            
+            document.getElementById('chapter-title').textContent = data.title;
+            const blocksDiv = document.getElementById('blocks');
+            blocksDiv.innerHTML = '';
+            
+            data.content.forEach((text, index) => {
+                blocksDiv.innerHTML += `
+                    <div class="block" data-index="${index}">
+                        <div class="content" contenteditable>${text}</div>
+                        <div class="block-controls">
+                            <button onclick="generateText(this, '续写')">续写</button>
+                            <button onclick="generateText(this, '扩写')">扩写</button>
+                        </div>
+                    </div>
+                `;
+            });
+            currentChapterId = chapterId;
+        }
+
+        // 保存内容
+        async function saveContent() {
+            const contents = Array.from(document.querySelectorAll('.content'))
+                            .map(el => el.innerHTML);
+            await fetch(`/chapter/${currentChapterId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ content: contents })
+            });
+            alert('保存成功！');
+        }
+
+        // 文本块操作
+        async function generateText(button, action) {
+            const block = button.closest('.block');
+            const currentText = block.querySelector('.content').innerHTML;
+            
+            const res = await fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: action,
+                    current_text: currentText,
+                    project_id: {{ project.id }},
+                    chapter_id: currentChapterId
+                })
+            });
+            const data = await res.json();
+            
+            if (action === '续写') {
+                block.querySelector('.content').innerHTML += data.generated_text;
+            } else {
+                block.querySelector('.content').innerHTML = data.generated_text;
+            }
+        }
+
+        // 添加章节功能
+        async function addChapter() {
+        const title = prompt('请输入新章节标题：');
+        if (title) {
+            const res = await fetch('/chapter', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    title: title,
+                    project_id: {{ project.id }},
+                    order: {{ chapters|length + 1 }}
+                })
+            });
+            const data = await res.json();
+            location.reload(); // 刷新章节列表
+        }
+    }
+
+    // 添加文本块功能
+    async function addBlock() {
+        if (!currentChapterId) {
+            alert('请先选择章节');
+            return;
+        }
+        
+        // 获取当前所有内容
+        const contents = Array.from(document.querySelectorAll('.content'))
+                            .map(el => el.innerHTML);
+        // 添加新块
+        contents.push('新文本块');
+        
+        // 保存更新
+        await fetch(`/chapter/${currentChapterId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content: contents })
+        });
+        
+        // 重新加载
+        loadChapter(currentChapterId);
+    }
+
+    // 初始化加载第一个章节
+    {% if chapters %}
+    loadChapter({{ chapters[0].id }});
+    {% endif %}
+    </script>
+</body>
+</html>

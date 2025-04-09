@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>小说创作助手</title>
+    <style>
+        body { margin: 0; font-family: Arial; display: flex; }
+        /* 左侧导航栏 */
+        #sidebar {
+            width: 250px; height: 100vh; background: #f5f5f5;
+            padding: 20px; overflow-y: auto;
+        }
+        /* 内容区域 */
+        #content { flex: 1; padding: 20px; }
+        .block { margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; }
+        .block-controls { margin-top: 10px; }
+        button { margin-right: 5px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <!-- 左侧导航 -->
+    <div id="sidebar">
+        <button onclick="createProject()">新建项目</button>
+        <div id="project-list"></div>
+    </div>
+
+    <!-- 内容编辑区 -->
+    <div id="content">
+        <h2 id="page-title"></h2>
+        <div id="blocks"></div>
+        <button onclick="addBlock()">+ 添加文本块</button>
+    </div>
+
+    <script>
+        let currentProjectId = null;
+        let currentChapterId = null;
+
+        // 初始化加载项目列表
+        fetch('/projects')
+            .then(r => r.json())
+            .then(projects => {
+                let html = '';
+                projects.projects.forEach(p => {
+                    html += `
+                        <div class="project" data-id="${p.id}">
+                            <h3>${p.title}</h3>
+                            <button onclick="loadSettings(${p.id})">设定</button>
+                            <button onclick="loadChapters(${p.id})">目录</button>
+                        </div>
+                    `;
+                });
+                document.getElementById('project-list').innerHTML = html;
+            });
+
+        // 创建新项目
+        async function createProject() {
+            const title = prompt('请输入项目名称');
+            const res = await fetch('/project', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ title })
+            });
+            location.reload();
+        }
+
+        // 加载章节内容
+        async function loadChapter(chapterId) {
+            const res = await fetch(`/chapter/${chapterId}`);
+            const data = await res.json();
+            
+            document.getElementById('page-title').textContent = data.title;
+            const blocksDiv = document.getElementById('blocks');
+            blocksDiv.innerHTML = '';
+            
+            data.content.forEach((text, index) => {
+                blocksDiv.innerHTML += `
+                    <div class="block" data-index="${index}">
+                        <div class="block-content" contenteditable="true">${text}</div>
+                        <div class="block-controls">
+                            <button onclick="generateText(this, '续写')">续写</button>
+                            <button onclick="generateText(this, '扩写')">扩写</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // AI 生成
+        async function generateText(button, action) {
+            const block = button.closest('.block');
+            const currentText = block.querySelector('.block-content').innerHTML;
+            
+            const res = await fetch('/generate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: action,
+                    current_text: currentText,
+                    project_id: currentProjectId
+                })
+            });
+            const data = await res.json();
+            
+            if (action === '续写') {
+                block.querySelector('.block-content').innerHTML += data.generated_text;
+            } else {
+                block.querySelector('.block-content').innerHTML = data.generated_text;
+            }
+        }
+
+        // 添加新文本块
+        async function addBlock() {
+            const blocks = document.querySelectorAll('.block-content');
+            const contents = Array.from(blocks).map(b => b.innerHTML);
+            contents.push('新文本块');
+            
+            await fetch(`/chapter/${currentChapterId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ content: contents })
+            });
+            
+            loadChapter(currentChapterId);
+        }
+    </script>
+</body>
+</html>
