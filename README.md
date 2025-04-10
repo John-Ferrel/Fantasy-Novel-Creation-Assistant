@@ -48,3 +48,7 @@
 ### 环境要求
 - Python 3.8+
 - DeepSeek API Key
+
+## 补充说明
+
+目前api采用Anythingllm + deepseek本地模型。本地部署该项目，需要部署本地大模型或者调用deepseek接口。
